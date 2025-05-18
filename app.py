@@ -25,6 +25,7 @@ SYMBOLS = {
     'tau': ('τ', 'tau'),
     'upsilon': ('υ', 'upsilon'),
     'phi': ('φ', 'phi'),
+    'varphi': ('ϕ', 'varphi'),
     'chi': ('χ', 'chi'),
     'psi': ('ψ', 'psi'),
     'omega': ('ω', 'omega'),
@@ -60,11 +61,9 @@ SYMBOLS = {
     'prime': ("′", "prime"),
 }
 
-
 def remove_dollar_signs(text):
-    # Remove inline $...$ and display $$...$$ delimiters
-    text = re.sub(r'\$\$(.+?)\$\$', r'\1', text, flags=re.DOTALL)  # remove $$...$$
-    text = re.sub(r'\$(.+?)\$', r'\1', text, flags=re.DOTALL)      # remove $...$
+    text = re.sub(r'\$\$(.+?)\$\$', r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'\$(.+?)\$', r'\1', text, flags=re.DOTALL)
     return text
 
 def replace_tex_symbols(text, symbol_dict, use_unicode=True):
@@ -74,22 +73,17 @@ def replace_tex_symbols(text, symbol_dict, use_unicode=True):
     return re.sub(r'\\([a-zA-Z]+)', symbol_replacer, text)
 
 def convert_exponents(text):
-    # Keep ^ and _ notation as-is (do not convert superscripts/subscripts)
     return text
 
 def clean_latex(text, symbol_dict, use_unicode=True):
     text = remove_dollar_signs(text)
-
-    # Split text by LaTeX environment blocks to preserve them as is
     blocks = re.split(r'(\\begin\{.*?\}.*?\\end\{.*?\})', text, flags=re.DOTALL)
     processed = []
 
     for block in blocks:
         if re.match(r'\\begin\{.*?\}.*?\\end\{.*?\}', block, flags=re.DOTALL):
-            # Preserve whole environment block exactly as is
             processed.append(block.strip())
         else:
-            # Process normal text: replace some LaTeX commands but keep ^ and _
             block = block.replace(r'\sqrt', 'SQRTPLACEHOLDER')
             block = block.replace('\\\\', '\n')
             block = re.sub(r'\\\[|\\\]', '', block, flags=re.DOTALL)
@@ -98,8 +92,7 @@ def clean_latex(text, symbol_dict, use_unicode=True):
             block = re.sub(r'\\left', '', block)
             block = re.sub(r'\\right', '', block)
 
-            block = convert_exponents(block)  # returns block unchanged here
-
+            block = convert_exponents(block)
             block = replace_tex_symbols(block, symbol_dict, use_unicode)
             block = block.replace('SQRTPLACEHOLDER', r'\sqrt')
             processed.append(block.strip())
