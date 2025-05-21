@@ -1,7 +1,6 @@
 import streamlit as st
 import re
 
-# Default Mapping for TeX symbols to Unicode/plaintext
 SYMBOLS = {
     'alpha': ('α', 'alpha'),
     'beta': ('β', 'beta'),
@@ -25,7 +24,6 @@ SYMBOLS = {
     'tau': ('τ', 'tau'),
     'upsilon': ('υ', 'upsilon'),
     'phi': ('φ', 'phi'),
-    'varphi': ('ϕ', 'varphi'),
     'chi': ('χ', 'chi'),
     'psi': ('ψ', 'psi'),
     'omega': ('ω', 'omega'),
@@ -72,16 +70,13 @@ def replace_tex_symbols(text, symbol_dict, use_unicode=True):
         return symbol_dict.get(name, (match.group(0), name))[0 if use_unicode else 1]
     return re.sub(r'\\([a-zA-Z]+)', symbol_replacer, text)
 
-def convert_exponents(text):
-    return text
-
 def clean_latex(text, symbol_dict, use_unicode=True):
     text = remove_dollar_signs(text)
-    blocks = re.split(r'(\\begin\{.*?\}.*?\\end\{.*?\})', text, flags=re.DOTALL)
+    blocks = re.split(r'(\\begin\{.?\}.?\\end\{.*?\})', text, flags=re.DOTALL)
     processed = []
 
     for block in blocks:
-        if re.match(r'\\begin\{.*?\}.*?\\end\{.*?\}', block, flags=re.DOTALL):
+        if re.match(r'\\begin\{.?\}.?\\end\{.*?\}', block, flags=re.DOTALL):
             processed.append(block.strip())
         else:
             block = block.replace(r'\sqrt', 'SQRTPLACEHOLDER')
@@ -92,7 +87,11 @@ def clean_latex(text, symbol_dict, use_unicode=True):
             block = re.sub(r'\\left', '', block)
             block = re.sub(r'\\right', '', block)
 
-            block = convert_exponents(block)
+            # Remove Markdown headings (###, ##, ####, etc.)
+            block = re.sub(r'^\s*#{1,6}\s*', '', block, flags=re.MULTILINE)
+            # Remove horizontal rules (---)
+            block = re.sub(r'^\s*[-_]{3,}\s*$', '', block, flags=re.MULTILINE)
+
             block = replace_tex_symbols(block, symbol_dict, use_unicode)
             block = block.replace('SQRTPLACEHOLDER', r'\sqrt')
             processed.append(block.strip())
@@ -100,14 +99,15 @@ def clean_latex(text, symbol_dict, use_unicode=True):
     return "\n".join(processed).strip()
 
 def format_output(text, fmt):
+    # Convert - to • for bullet point formatting
+    text = re.sub(r'^\s*-\s+', '• ', text, flags=re.MULTILINE)
+
     if fmt == "Markdown":
         return text
     elif fmt == "Plain Text":
         return re.sub(r'[`*_]', '', text)
     elif fmt == "HTML":
-        html_text = text.replace('\n', '<br>')
-        html_text = html_text.replace('`', '')
-        return html_text
+        return text.replace('\n', '<br>').replace('`', '')
     return text
 
 # Streamlit App
@@ -148,12 +148,11 @@ def process_conversion():
         return None
     else:
         result = clean_latex(latex_input, SYMBOLS, use_unicode)
-        formatted_result = format_output(result, output_format)
-        return formatted_result
+        return format_output(result, output_format)
 
 if st.button("Convert"):
     converted_output = process_conversion()
-    if converted_output is not None:
+    if converted_output:
         st.session_state["converted_output"] = converted_output
         st.success("✅ Converted Output:")
         if output_format == "HTML":
@@ -161,12 +160,12 @@ if st.button("Convert"):
         else:
             st.code(converted_output, language="markdown" if output_format == "Markdown" else "")
 
-if 'converted_output' in st.session_state and st.session_state.converted_output:
+if 'converted_output' in st.session_state:
     file_ext = {"Markdown": "md", "Plain Text": "txt", "HTML": "html"}[output_format]
     mime_type = {"Markdown": "text/markdown", "Plain Text": "text/plain", "HTML": "text/html"}[output_format]
     st.download_button(
         f"📄 Download as .{file_ext}",
-        data=st.session_state.converted_output,
+        data=st.session_state["converted_output"],
         file_name=f"converted_output.{file_ext}",
         mime=mime_type
     )
