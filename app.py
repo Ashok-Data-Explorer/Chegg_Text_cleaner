@@ -6,7 +6,6 @@ SYMBOLS = {
     'beta': ('β', 'beta'),
     'gamma': ('γ', 'gamma'),
     'delta': ('δ', 'delta'),
-    'vartheta': ('ϑ', 'vartheta'),
     'epsilon': ('ε', 'epsilon'),
     'zeta': ('ζ', 'zeta'),
     'eta': ('η', 'eta'),
