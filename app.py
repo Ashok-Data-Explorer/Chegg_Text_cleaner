@@ -2,61 +2,24 @@ import streamlit as st
 import re
 
 SYMBOLS = {
-    'alpha': ('α', 'alpha'),
-    'beta': ('β', 'beta'),
-    'gamma': ('γ', 'gamma'),
-    'delta': ('δ', 'delta'),
-    'epsilon': ('ε', 'epsilon'),
-    'zeta': ('ζ', 'zeta'),
-    'eta': ('η', 'eta'),
-    'theta': ('θ', 'theta'),
-    'iota': ('ι', 'iota'),
-    'kappa': ('κ', 'kappa'),
-    'lambda': ('λ', 'lambda'),
-    'mu': ('μ', 'mu'),
-    'nu': ('ν', 'nu'),
-    'xi': ('ξ', 'xi'),
-    'omicron': ('ο', 'omicron'),
-    'pi': ('π', 'pi'),
-    'rho': ('ρ', 'rho'),
-    'sigma': ('σ', 'sigma'),
-    'tau': ('τ', 'tau'),
-    'upsilon': ('υ', 'upsilon'),
-    'phi': ('Φ', 'phi'),
-    'vartheta': ('ϑ', 'vartheta'),
-    'chi': ('χ', 'chi'),
-    'psi': ('ψ', 'psi'),
-    'omega': ('ω', 'omega'),
-    'infty': ('∞', 'infinity'),
-    'pm': ('±', '+-'),
-    'mp': ('∓', '−+'),
-    'leq': ('≤', '<='),
-    'geq': ('≥', '>='),
-    'neq': ('≠', '!='),
-    'approx': ('≈', '~='),
-    'times': ('×', '*'),
-    'div': ('÷', '/'),
-    'cdot': ('·', '*'),
-    'rightarrow': ('→', '->'),
-    'leftarrow': ('←', '<-'),
-    'leftrightarrow': ('↔', '<->'),
-    'sum': ('∑', 'sum'),
-    'prod': ('∏', 'prod'),
-    'int': ('∫', 'integral'),
-    'partial': ('∂', 'partial'),
-    'nabla': ('∇', 'nabla'),
-    'forall': ('∀', 'forall'),
-    'exists': ('∃', 'exists'),
-    'in': ('∈', 'in'),
-    'notin': ('∉', 'notin'),
-    'subset': ('⊂', 'subset'),
-    'subseteq': ('⊆', 'subseteq'),
-    'supset': ('⊃', 'supset'),
-    'supseteq': ('⊇', 'supseteq'),
-    'emptyset': ('∅', 'emptyset'),
-    'angle': ('∠', 'angle'),
-    'degree': ('°', 'degree'),
-    'prime': ("′", "prime"),
+    'alpha': ('α', 'alpha'), 'beta': ('β', 'beta'), 'gamma': ('γ', 'gamma'),
+    'delta': ('δ', 'delta'), 'vartheta': ('ϑ', 'vartheta'), 'epsilon': ('ε', 'epsilon'),
+    'zeta': ('ζ', 'zeta'), 'eta': ('η', 'eta'), 'theta': ('θ', 'theta'),
+    'iota': ('ι', 'iota'), 'kappa': ('κ', 'kappa'), 'lambda': ('λ', 'lambda'),
+    'mu': ('μ', 'mu'), 'nu': ('ν', 'nu'), 'xi': ('ξ', 'xi'),
+    'omicron': ('ο', 'omicron'), 'pi': ('π', 'pi'), 'rho': ('ρ', 'rho'),
+    'sigma': ('σ', 'sigma'), 'tau': ('τ', 'tau'), 'upsilon': ('υ', 'upsilon'),
+    'phi': ('φ', 'phi'), 'chi': ('χ', 'chi'), 'psi': ('ψ', 'psi'), 'omega': ('ω', 'omega'),
+    'infty': ('∞', 'infinity'), 'pm': ('±', '+-'), 'mp': ('∓', '−+'),
+    'leq': ('≤', '<='), 'geq': ('≥', '>='), 'neq': ('≠', '!='), 'approx': ('≈', '~='),
+    'times': ('×', '*'), 'div': ('÷', '/'), 'cdot': ('·', '*'),
+    'rightarrow': ('→', '->'), 'leftarrow': ('←', '<-'), 'leftrightarrow': ('↔', '<->'),
+    'sum': ('∑', 'sum'), 'prod': ('∏', 'prod'), 'int': ('∫', 'integral'),
+    'partial': ('∂', 'partial'), 'nabla': ('∇', 'nabla'), 'forall': ('∀', 'forall'),
+    'exists': ('∃', 'exists'), 'in': ('∈', 'in'), 'notin': ('∉', 'notin'),
+    'subset': ('⊂', 'subset'), 'subseteq': ('⊆', 'subseteq'), 'supset': ('⊃', 'supset'),
+    'supseteq': ('⊇', 'supseteq'), 'emptyset': ('∅', 'emptyset'),
+    'angle': ('∠', 'angle'), 'degree': ('°', 'degree'), 'prime': ("′", "prime"),
 }
 
 def remove_dollar_signs(text):
@@ -72,36 +35,46 @@ def replace_tex_symbols(text, symbol_dict, use_unicode=True):
 
 def clean_latex(text, symbol_dict, use_unicode=True):
     text = remove_dollar_signs(text)
-    blocks = re.split(r'(\\begin\{.?\}.?\\end\{.*?\})', text, flags=re.DOTALL)
+
+    math_blocks = {}
+    def preserve_math_block(match):
+        key = f"__MATHBLOCK_{len(math_blocks)}__"
+        content = match.group(1)
+        math_blocks[key] = content  # Preserve content inside \[...\]
+        return key
+
+    # Replace \[...\] with placeholders
+    text = re.sub(r'\\\[(.*?)\\\]', preserve_math_block, text, flags=re.DOTALL)
+
+    blocks = re.split(r'(\\begin\{.*?\}.*?\\end\{.*?\})', text, flags=re.DOTALL)
     processed = []
 
     for block in blocks:
-        if re.match(r'\\begin\{.?\}.?\\end\{.*?\}', block, flags=re.DOTALL):
+        if re.match(r'\\begin\{.*?\}.*?\\end\{.*?\}', block, flags=re.DOTALL):
             processed.append(block.strip())
         else:
             block = block.replace(r'\sqrt', 'SQRTPLACEHOLDER')
             block = block.replace('\\\\', '\n')
-            block = re.sub(r'\\\[|\\\]', '', block, flags=re.DOTALL)
             block = re.sub(r'\\\((.*?)\\\)', r'\1', block)
             block = re.sub(r'\\text\{(.*?)\}', r'\1', block)
             block = re.sub(r'\\left', '', block)
             block = re.sub(r'\\right', '', block)
-
-            # Remove Markdown headings (###, ##, ####, etc.)
             block = re.sub(r'^\s*#{1,6}\s*', '', block, flags=re.MULTILINE)
-            # Remove horizontal rules (---)
             block = re.sub(r'^\s*[-_]{3,}\s*$', '', block, flags=re.MULTILINE)
-
             block = replace_tex_symbols(block, symbol_dict, use_unicode)
             block = block.replace('SQRTPLACEHOLDER', r'\sqrt')
             processed.append(block.strip())
 
-    return "\n".join(processed).strip()
+    result = "\n".join(processed).strip()
+
+    # Reinsert preserved math blocks
+    for key, original in math_blocks.items():
+        result = result.replace(key, original.strip())
+
+    return result
 
 def format_output(text, fmt):
-    # Convert - to • for bullet point formatting
     text = re.sub(r'^\s*-\s+', '• ', text, flags=re.MULTILINE)
-
     if fmt == "Markdown":
         return text
     elif fmt == "Plain Text":
@@ -135,7 +108,7 @@ else:
 latex_input = st.text_area(
     "Enter LaTeX Expression:",
     height=200,
-    placeholder=r"Example: \frac{a^2 + b^2}{a + b} or $x = 4 > 3$",
+    placeholder=r"Example: \frac{a^2 + b^2}{a + b} or \[ \rho(r) = \begin{cases} 4A \epsilon_0 r & \text{for } r < a, \\ 0 & \text{for } a < r < b \end{cases} \]",
     key="latex_area"
 )
 
